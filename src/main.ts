@@ -1,16 +1,19 @@
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import * as cookieeParser from "cookie-parser";
+import * as cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
+import { CorsOptions } from "@nestjs/common/interfaces/external/cors-options.interface";
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
-    app.use(cookieeParser());
-    app.enableCors({
+
+    const corsOption: CorsOptions = {
         origin: "http://localhost:4200", // Allow requests only from this origin
         methods: "GET,POST,PUT,DELETE", // Specify allowed methods
         credentials: true, // If you need to allow cookies or credentials
-    });
+    }
+       const app = await NestFactory.create(AppModule);
+    app.use(cookieParser());
+    app.enableCors(corsOption);
 
     const config = new DocumentBuilder()
         .setTitle("Auth API")

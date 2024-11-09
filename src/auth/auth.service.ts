@@ -52,7 +52,7 @@ export class AuthService {
         }
     }
 
-    async validateToken(token: string) {
+    async validateToken(token: any) {
         try {
             const decoded = this.jwtService.verify(token);
             return { isValid: true, decoded };
@@ -68,11 +68,10 @@ export class AuthService {
         // Generate the JWT token
         const token = this.jwtService.sign(payload, { expiresIn: "7d" });
 
-        // Set the HttpOnly cookie with the token
         (response as any).cookie("auth_token", token, {
-            httpOnly: true,
-            // secure: true,
-            // sameSite: "strict",
+            httpOnly: true,             
+            secure: false,
+            origin: 'http://localhost:3030',                     
             maxAge: 3600000,
         });
 
