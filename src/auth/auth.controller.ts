@@ -15,14 +15,14 @@ import { AuthService } from "./auth.service";
 export class AuthController {
     constructor(private authService: AuthService) {}
 
-    @Get('validate_token')
+    @Get("validate_token")
     async validateToken(@Req() request: Request) {
-        const token = (request as any).cookies['auth_token'];
+        const token = (request as any).cookies["auth_token"];
 
-        console.log("Cookies:", (request as any).cookies['auth_token']); 
+        console.log("Cookies:", (request as any).cookies["auth_token"]);
 
         if (!token) {
-            throw new BadRequestException('Missing auth_token cookie');
+            throw new BadRequestException("Missing auth_token cookie");
         }
 
         // Pass the token to the service to validate

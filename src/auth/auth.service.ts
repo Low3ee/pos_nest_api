@@ -1,26 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import {
-    HttpException,
-    HttpStatus,
-    Injectable,
-    UnauthorizedException,
-} from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { PrismaService } from "prisma/prisma.service";
+import { Response } from 'express'; // Make sure to import the Response type
+
 @Injectable()
 export class AuthService {
     constructor(
         private jwtService: JwtService,
         private prisma: PrismaService,
     ) {}
-    async validateUserLogin(userCreds: any, response: Response): Promise<any> {
+
+    async validateUserLogin(userCreds: { email: string; _password: string }, response: any): Promise<any> {
         const { email, _password } = userCreds;
-        // console.log(userCreds);
-        // console.log(`gikan sa service: ${email}, ${_password}`);
 
         try {
-            // Check if the user exists in the database
             const user = await this.prisma.user.findUnique({
                 where: { email },
             });
@@ -29,30 +24,25 @@ export class AuthService {
                 throw new HttpException("No user found", HttpStatus.FORBIDDEN);
             }
 
-            // Verify the password using bcrypt
             const success = await bcrypt.compare(_password, user.password);
-
             if (!success) {
-                throw new HttpException(
-                    "Invalid Credentials",
-                    HttpStatus.FORBIDDEN,
-                );
+                throw new HttpException("Invalid credentials, incorrect password", HttpStatus.FORBIDDEN);
             }
 
-            // Remove the password from the result
-            const { password, ...result } = user;
+            const { password, ...userWithoutPassword } = user;
 
-            // Call the login method and pass the response to set the cookie
-            return this.login(result, response);
-        } catch (error) {
-            throw new HttpException(
-                "Something went wrong...",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-            );
+            return this.login(userWithoutPassword, response);
+        }  catch (error) {
+            console.error(error);
+            if (error instanceof HttpException) {
+                throw error;
+            } else {
+                throw new HttpException("Something went wrong...", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
     }
 
-    async validateToken(token: any) {
+    async validateToken(token: string): Promise<any> {
         try {
             const decoded = this.jwtService.verify(token);
             return { isValid: true, decoded };
@@ -61,21 +51,21 @@ export class AuthService {
         }
     }
 
-    async login(user: any, response: Response) {
-        // Create the JWT payload
+    async login(user: { email: string; id: number; fullName: string }, response: any): Promise<any> {
         const payload = { email: user.email, sub: user.id };
 
-        // Generate the JWT token
         const token = this.jwtService.sign(payload, { expiresIn: "7d" });
 
-        (response as any).cookie("auth_token", token, {
-            httpOnly: true,             
-            secure: false,
-            origin: 'http://localhost:3030',                     
+        const isProduction = process.env.NODE_ENV === 'production';
+
+        response.cookie("auth_token", token, {
+            httpOnly: true,
+            secure: isProduction, 
+            origin: "http://localhost:3030",
             maxAge: 3600000,
         });
 
-        (response as any).send({
+        return response.send({
             message: "Login successful",
             success: true,
             user: {
@@ -86,7 +76,7 @@ export class AuthService {
         });
     }
 
-    async register(name: string, email: string, pass: string) {
+    async register(name: string, email: string, pass: string): Promise<any> {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(pass, saltRounds);
 
@@ -98,6 +88,7 @@ export class AuthService {
             },
         });
 
+        // Remove password before returning user data
         const { password, ...result } = user;
         return result;
     }
