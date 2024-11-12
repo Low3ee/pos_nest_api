@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { HttpException, HttpStatus, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+    HttpException,
+    HttpStatus,
+    Injectable,
+    UnauthorizedException,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { PrismaService } from "prisma/prisma.service";
-import { Response } from 'express'; // Make sure to import the Response type
 
 @Injectable()
 export class AuthService {
@@ -12,7 +16,10 @@ export class AuthService {
         private prisma: PrismaService,
     ) {}
 
-    async validateUserLogin(userCreds: { email: string; _password: string }, response: any): Promise<any> {
+    async validateUserLogin(
+        userCreds: { email: string; _password: string },
+        response: any,
+    ): Promise<any> {
         const { email, _password } = userCreds;
 
         try {
@@ -26,18 +33,24 @@ export class AuthService {
 
             const success = await bcrypt.compare(_password, user.password);
             if (!success) {
-                throw new HttpException("Invalid credentials, incorrect password", HttpStatus.FORBIDDEN);
+                throw new HttpException(
+                    "Invalid credentials, incorrect password",
+                    HttpStatus.FORBIDDEN,
+                );
             }
 
             const { password, ...userWithoutPassword } = user;
 
             return this.login(userWithoutPassword, response);
-        }  catch (error) {
+        } catch (error) {
             console.error(error);
             if (error instanceof HttpException) {
                 throw error;
             } else {
-                throw new HttpException("Something went wrong...", HttpStatus.INTERNAL_SERVER_ERROR);
+                throw new HttpException(
+                    "Something went wrong...",
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                );
             }
         }
     }
@@ -51,16 +64,19 @@ export class AuthService {
         }
     }
 
-    async login(user: { email: string; id: number; fullName: string }, response: any): Promise<any> {
+    async login(
+        user: { email: string; id: number; fullName: string },
+        response: any,
+    ): Promise<any> {
         const payload = { email: user.email, sub: user.id };
 
         const token = this.jwtService.sign(payload, { expiresIn: "7d" });
 
-        const isProduction = process.env.NODE_ENV === 'production';
+        const isProduction = process.env.NODE_ENV === "production";
 
         response.cookie("auth_token", token, {
             httpOnly: true,
-            secure: isProduction, 
+            secure: isProduction,
             origin: "http://localhost:3030",
             maxAge: 3600000,
         });
