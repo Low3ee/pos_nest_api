@@ -15,6 +15,7 @@ import { AuthService } from "./auth.service";
 export class AuthController {
     constructor(private authService: AuthService) {}
 
+    // Validate the token received in the cookies
     @Get("validate_token")
     async validateToken(@Req() request: Request) {
         const token = (request as any).cookies["auth_token"];
@@ -25,7 +26,6 @@ export class AuthController {
             throw new BadRequestException("Missing auth_token cookie");
         }
 
-        // Pass the token to the service to validate
         return this.authService.validateToken(token);
     }
 
@@ -41,13 +41,14 @@ export class AuthController {
     @Post("register")
     @Header("Content-Type", "application/json")
     async register(
-        @Body() body: { fullName: string; email: string; password: string },
+        @Body() body: { fname: string; lname: string; phone: string; email: string; password: string },
     ) {
-        const { fullName, email, password } = body;
-        // console.log(body);
-        if (!fullName || !email || !password) {
+        const { fname, lname, phone, email, password } = body;
+
+        if (!fname || !lname || !email || !password) {
             throw new BadRequestException("Missing registration details");
         }
-        return this.authService.register(fullName, email, password);
+
+        return this.authService.register(fname, lname, phone, email, password);
     }
 }

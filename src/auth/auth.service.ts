@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+    BadRequestException,
     HttpException,
     HttpStatus,
     Injectable,
@@ -23,7 +24,7 @@ export class AuthService {
         const { email, _password } = userCreds;
 
         try {
-            const user = await this.prisma.user.findUnique({
+            const user = await this.prisma.customer.findUnique({
                 where: { email },
             });
 
@@ -65,7 +66,7 @@ export class AuthService {
     }
 
     async login(
-        user: { email: string; id: number; fullName: string },
+        user: { email: string; id: number; firstName: string; lastName: string; },
         response: any,
     ): Promise<any> {
         const payload = { email: user.email, sub: user.id };
@@ -74,11 +75,12 @@ export class AuthService {
 
         const isProduction = process.env.NODE_ENV === "production";
 
+        // Set the token in the cookie
         response.cookie("auth_token", token, {
             httpOnly: true,
             secure: isProduction,
-            origin: "http://localhost:3030",
-            maxAge: 3600000,
+            origin: "http://localhost:3030", 
+            maxAge: 3600000, // 1 hour
         });
 
         return response.send({
@@ -87,24 +89,34 @@ export class AuthService {
             user: {
                 id: user.id,
                 email: user.email,
-                fullName: user.fullName,
+                fname: user.firstName,
+                lname: user.lastName
             },
         });
     }
 
-    async register(name: string, email: string, pass: string): Promise<any> {
+    async register(fname: string, lname: string, phone: string, email: string, pass: string): Promise<any> {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(pass, saltRounds);
 
-        const user = await this.prisma.user.create({
+        const existingUser = await this.prisma.customer.findUnique({
+            where: { email },
+        });
+    
+        if (existingUser) {
+            throw new BadRequestException("Email is already used, log in instead.");
+        }
+
+        const user = await this.prisma.customer.create({
             data: {
-                fullName: name,
-                email,
+                firstName: fname,
+                lastName: lname,
+                email: email,
+                phone: phone,
                 password: hashedPassword,
             },
         });
 
-        // Remove password before returning user data
         const { password, ...result } = user;
         return result;
     }
